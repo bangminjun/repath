@@ -1,0 +1,19 @@
+# 라이브러리 (가장 용량 많이 차지함)
+node_modules/
+
+# 빌드 결과물
+dist/
+build/
+out/
+
+# 운영체제 쓰레기 파일
+.DS_Store
+Thumbs.db
+
+# 환경변수 (비밀번호, API 키 등 보안 중요)
+.env
+.env.local
+
+# 로그 파일
+*.log
+npm-debug.log*

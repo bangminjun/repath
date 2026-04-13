@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RE:PATH</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #000;
+      --surface: #0d1b2a;
+      --border: rgba(255,255,255,0.18);
+      --accent: #2ecc71;
+      --text: #ffffff;
+      --btn-confirm: #0d1b2a;
+      --error: #e74c3c;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #000;
+      border-bottom: 1.5px solid rgba(255,255,255,0.12);
+      padding: 18px 0;
+      text-align: center;
+      position: relative;
+    }
+
+    header h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ── MQTT 상태 뱃지 ── */
+    .mqtt-status {
+      position: absolute;
+      top: 50%;
+      right: 24px;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      opacity: 0.85;
+    }
+
+    .mqtt-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.4s;
+    }
+
+    .mqtt-dot.connected { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+    .mqtt-dot.disconnected { background: var(--error); box-shadow: 0 0 6px var(--error); }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 5vh 6vw 4vh;
+      gap: 6vh;
+    }
+
+    .current-location {
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+    }
+
+    .current-location .floor-label { color: var(--accent); }
+
+    /* ── Card grid ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(12px, 2.5vw, 28px);
+    }
+
+    .floor-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 18px;
+      padding: clamp(28px, 5vh, 56px) clamp(20px, 3vw, 36px);
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: clamp(100px, 18vh, 200px);
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .floor-card:hover {
+      border-color: rgba(255,255,255,0.45);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(46,204,113,0.08);
+    }
+
+    .floor-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 8px 40px rgba(46,204,113,0.18);
+    }
+
+    .floor-card .floor-name {
+      font-size: clamp(1.4rem, 3vw, 2.4rem);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      color: var(--text);
+    }
+
+    /* ── Confirm button ── */
+    .confirm-btn {
+      background: var(--btn-confirm);
+      border: 2px solid var(--border);
+      border-radius: 999px;
+      padding: clamp(18px, 3vh, 30px) 0;
+      width: 100%;
+      color: var(--text);
+      font-size: clamp(1.2rem, 2.5vw, 1.9rem);
+      font-weight: 900;
+      font-family: 'Noto Sans KR', sans-serif;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.12s, color 0.2s;
+    }
+
+    .confirm-btn:hover:not(:disabled) {
+      background: #162333;
+      border-color: rgba(255,255,255,0.35);
+    }
+
+    .confirm-btn:active:not(:disabled) { transform: scale(0.98); }
+
+    .confirm-btn.ready {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+
+    .confirm-btn.loading {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .confirm-btn.success {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+
+    .confirm-btn.error {
+      background: var(--error);
+      border-color: var(--error);
+      color: #fff;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1a1a2e;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 28px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.3s;
+      z-index: 999;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success { border-color: var(--accent); color: var(--accent); }
+    .toast.error   { border-color: var(--error);  color: var(--error);  }
+
+    /* ── Ripple ── */
+    @keyframes ripple { to { transform: scale(3.5); opacity: 0; } }
+
+    .ripple-circle {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      width: 60px; height: 60px;
+      transform: scale(0);
+      animation: ripple 0.5s linear;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>RE:PATH</h1>
+    <div class="mqtt-status">
+      <div class="mqtt-dot" id="mqttDot"></div>
+      <span id="mqttLabel">확인 중...</span>
+    </div>
+  </header>
+
+  <main>
+    <p class="current-location">
+      현재 위치는 <span class="floor-label" id="currentFloor">1F/</span> 입니다.
+    </p>
+
+    <div class="card-grid" id="cardGrid">
+      <div class="floor-card selected" data-floor="1F/" onclick="selectFloor(this, event)">
+        <span class="floor-name">1F/</span>
+      </div>
+      <div class="floor-card" data-floor="2F/" onclick="selectFloor(this, event)">
+        <span class="floor-name">2F/</span>
+      </div>
+      <div class="floor-card" data-floor="3F/" onclick="selectFloor(this, event)">
+        <span class="floor-name">3F/</span>
+      </div>
+    </div>
+
+    <button class="confirm-btn ready" id="confirmBtn" onclick="confirmSelection()">선택 확정</button>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let selectedFloor = '1F/';
+    let isSending = false;
+
+    // ── MQTT 상태 polling ─────────────────────────
+    async function checkMqttStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        const dot = document.getElementById('mqttDot');
+        const label = document.getElementById('mqttLabel');
+        if (data.mqtt === 'connected') {
+          dot.className = 'mqtt-dot connected';
+          label.textContent = 'MQTT 연결됨';
+        } else {
+          dot.className = 'mqtt-dot disconnected';
+          label.textContent = 'MQTT 끊김';
+        }
+      } catch {
+        document.getElementById('mqttDot').className = 'mqtt-dot disconnected';
+        document.getElementById('mqttLabel').textContent = '서버 오프라인';
+      }
+    }
+
+    checkMqttStatus();
+    setInterval(checkMqttStatus, 5000);
+
+    // ── 층 카드 선택 ──────────────────────────────
+    function selectFloor(card, event) {
+      if (isSending) return;
+
+      const rect = card.getBoundingClientRect();
+      const circle = document.createElement('span');
+      circle.className = 'ripple-circle';
+      circle.style.left = (event.clientX - rect.left - 30) + 'px';
+      circle.style.top  = (event.clientY - rect.top  - 30) + 'px';
+      card.appendChild(circle);
+      circle.addEventListener('animationend', () => circle.remove());
+
+      document.querySelectorAll('.floor-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedFloor = card.dataset.floor;
+      document.getElementById('currentFloor').textContent = selectedFloor;
+
+      const btn = document.getElementById('confirmBtn');
+      btn.className = 'confirm-btn ready';
+      btn.textContent = '선택 확정';
+    }
+
+    // ── 선택 확정 → API 호출 → MQTT 발행 ──────────
+    async function confirmSelection() {
+      if (isSending) return;
+      isSending = true;
+
+      const btn = document.getElementById('confirmBtn');
+      btn.className = 'confirm-btn loading';
+      btn.textContent = '전송 중...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/select-floor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ floor: selectedFloor }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          btn.className = 'confirm-btn success';
+          btn.textContent = `✓ ${selectedFloor} 전송 완료!`;
+          showToast(`📤 MQTT 발행 완료: topic="${data.topic}" | 값="${data.message}"`, 'success');
+        } else {
+          throw new Error(data.message || '전송 실패');
+        }
+      } catch (err) {
+        btn.className = 'confirm-btn error';
+        btn.textContent = '전송 실패 — 재시도';
+        showToast(`❌ 오류: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        isSending = false;
+        setTimeout(() => {
+          btn.className = 'confirm-btn ready';
+          btn.textContent = '선택 확정';
+        }, 2500);
+      }
+    }
+
+    // ── 토스트 알림 ───────────────────────────────
+    function showToast(msg, type = 'success') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = `toast ${type} show`;
+      setTimeout(() => { t.className = `toast ${type}`; }, 3000);
+    }
+  </script>
+</body>
+</html>

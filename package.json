@@ -1,0 +1,17 @@
+{
+  "name": "repath-server",
+  "version": "1.0.0",
+  "description": "RE:PATH 층 선택 → MQTT 발행 서버",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mqtt": "^5.3.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
